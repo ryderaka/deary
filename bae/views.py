@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from bae.models import *
-from football import UserResponse
+from bae import UserResponse
 from bae.serializer import UsersSerializer
 from bae.permissions import IsAuthenticated
 from bae.generics import CreateAPIView, UpdateAPIView
@@ -58,3 +58,39 @@ class UserUpdateAPIView(UpdateAPIView):
         user.save()
         user.reload()
         return UserResponse.response(self.get_serializer(user).data)
+
+
+# user login, logout, create
+from mongoengine.django.auth import User
+from mongoengine import *
+
+def login(request):
+    connect('reborn')
+    from django.contrib.auth import login
+    from mongoengine.django.auth import User
+    from mongoengine.queryset import DoesNotExist
+    from django.contrib import messages
+    try:
+        user = User.objects.get(username='bob')#request.POST['username'])
+        if user.check_password('bobpass'):#request.POST['password']):
+            user.backend = 'mongoengine.django.auth.MongoEngineBackend'
+            print(login(request, user))
+            request.session.set_expiry(60 * 60 * 1) # 1 hour timeout
+            print("return")
+            return HttpResponse("LOGUEJAT")#redirect('index')
+        else:
+            print "malament"
+            messages.add_message(request,messages.ERROR,u"Incorrect login name or password !")
+    except DoesNotExist:
+        messages.add_message(request,messages.ERROR,u"Incorrect login name or password !")
+    return render(request, 'login.html', {})
+
+def logout(request):#NOT TESTED
+    from django.contrib.auth import logout
+    logout(request)
+    return redirect('login')
+
+def createuser(request):
+    connect('reborn')
+    User.create_user('boba','bobpass','bobsaget@fullhouse.gov')
+    return HttpResponse("SAVED")
